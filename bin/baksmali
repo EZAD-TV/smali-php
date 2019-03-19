@@ -1,0 +1,4 @@
+#!/bin/sh
+
+folder=`dirname $0`
+java -jar $folder/baksmali-2.2.6.jar $@

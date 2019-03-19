@@ -1,0 +1,15 @@
+{
+    "require-dev": {
+        "pds/skeleton": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ezad\\Smali\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ezad\\Smali\\": "tests/"
+        }
+    }
+}
