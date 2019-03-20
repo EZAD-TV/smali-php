@@ -1,6 +1,14 @@
 <?php
 
+use Symfony\Component\Process\Process;
+
 require_once 'vendor/autoload.php';
+
+$proc = new Process(['/Users/stevenh/android-sdk-macosx/platform-tools/adb', 'devices', '-l']);
+$proc->run();
+echo $proc->getOutput();
+
+exit;
 
 $patch =
 "@devices p212:21- rk3399:21-23 model:old-new

@@ -17,4 +17,18 @@ class Processor
 {
     public $lines = [];
     public $pointer = 0;
+
+    public function __construct(array $lines)
+    {
+        $this->lines = $lines;
+    }
+
+    public function process(PatchFile $patchFile)
+    {
+        $this->pointer = 0;
+
+        foreach ( $patchFile->instructions as $instruction ) {
+            $instruction->execute($this);
+        }
+    }
 }

@@ -24,17 +24,32 @@ use Ezad\Smali\Patch\Instruction\ReplaceInstruction;
  */
 class PatchFile
 {
+    /**
+     * @var DeviceSpec[]
+     */
     public $specList = [];
+
+    public $name = '';
+
+    /** @var int */
+    public $priority = 0;
+    /** @var string */
     public $jarFile;
+    /** @var string */
     public $dexFile;
+    /** @var string */
     public $smaliFile;
+    /** @var string */
     public $method;
 
+    /** @var AbstractInstruction[] */
     public $instructions = [];
 
     public static function parseFile($file)
     {
-        return static::parse(\file_get_contents($file));
+        $pf = static::parse(\file_get_contents($file));
+        $pf->name = basename($file);
+        return $pf;
     }
 
     public static function parse($text)
@@ -76,6 +91,9 @@ class PatchFile
             }
             if ( strpos($line, '@method ') === 0 ) {
                 $patch->method = trim(substr($line, 8));
+            }
+            if ( strpos($line, '@priority ') === 0 ) {
+                $patch->priority = (int) trim(substr($line, 10));
             }
 
             foreach ( $instructions as $instr => $instrClass ) {

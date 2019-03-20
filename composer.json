@@ -1,4 +1,8 @@
 {
+    "require": {
+        "symfony/process": "^4.2",
+        "symfony/console": "^4.2"
+    },
     "require-dev": {
         "pds/skeleton": "^1.0"
     },

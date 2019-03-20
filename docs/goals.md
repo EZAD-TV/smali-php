@@ -4,6 +4,73 @@ The goal of this project is to be able to unpack a jar, decompile the .dex
 file(s) inside, apply one or more patches, recompile the .dex files, and
 re-pack the jar file.
 
+# Execution
+
+There should be a directory of patch files. Possibly recursive, but for now 
+don't worry since there's only like 1-2 patches to apply.
+
+```
+$adb = new ADB($adbPath);
+$deviceModel = $adb->getprop($serial, 'ro.product.model');
+$sdkVersion  = $adb->getprop($serial, 'ro.build.version.sdk');
+$device = new DeviceVersion($deviceModel, $sdkVersion);
+
+// first we want a list of patch files that apply to our device
+$patchSet = PatchFileSet::fromFolder($patchPath)->filterApplicable($device);
+$jarFiles = $patchSet->getJarFiles();
+$patchSum = $patchSet->getPatchSum();
+
+$registry = JarRegistry($registryPath);
+
+foreach ( $jarFiles as $jarFile ) {
+    $tmp = 'tmp' . uniqid();
+    $local = $tmp . '/' . basename($jarFile);
+    
+    $jarSum = $adb->sha1sum($serial, $jarFile);
+    if ( !$jarSum ) {
+        $adb->pull($serial, $jarFile, $local);
+        $jarSum = hash_file('sha1', $local);
+    }
+    
+    // $patchSum is global and not based on the patches for the jar. just in case there's some patches
+    // across multiple jars that require all of them to be applied.
+    $sum = "$jarSum.$patchSum";
+    
+    // if we have a modified .jar and patch set linked to $sum already, upload that jar
+    $modifiedJar = $registry->find($jarFile, $sum);
+    if ( !$modifiedJar ) {
+        $adb->pull($serial, $jarFile, $local);
+        // we need to jar xf the $local file (it's in its own folder already)
+        // get all patches that apply to the jar file, loop
+        //   organize patches by dex file, loop through dex files.
+        //     then run "baksmali dis $dex -o $tmp/out_$dex"
+        //     loop through patches for the dex file
+        //       then parse $tmp/out_$dex/$file and extract the lines from $method
+        //       then run those lines through the Processor
+        //       then put the .smali file together with {before method} . {altered method} . {after method}
+        //     end loop
+        //     recompile dex with "smali ass -o $dex $tmp/out_$dex"
+        //     remove $tmp/out_$dex folder
+        //   end loop
+        //   repackage jar file with "jar cf $modifiedJar *" in the $tmp folder
+        // end loop
+    }
+    $adb->push($serial, $modifiedJar, $jarFile);
+} 
+
+```
+
+Because of shit like the same device/sdk having different firmware,
+we will need to copy every .jar file that needs to be patched, compare sha1 sums, and
+either re-use the existing modified jar or make a new one and register it w/ the sha sum.
+With each registered jar/sum, we also need to track what patches ran against it. So if
+the patches change, it also will make a new one.
+
+Note: patches may still be restricted to ONLY run for certain device/sdk combos. So a
+patch that hides an ANR dialog is great for TVs but not necessary for tablets. This
+can also be used to have different patches for different versions if the internal
+class format changes (like ClassName$2 is moved to ClassName$3).
+
 # Patch format
 
 The patch needs to know:
