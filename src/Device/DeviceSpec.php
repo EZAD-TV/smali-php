@@ -65,7 +65,7 @@ class DeviceSpec
 
     public function matches(DeviceVersion $version)
     {
-        $matches = $this->model ? ($this->model === $version->model) : true;
+        $matches = $this->model ? (strtolower($this->model) === strtolower($version->model)) : true;
         return $matches && $version->sdk >= $this->versionMin && $version->sdk <= $this->versionMax;
     }
 

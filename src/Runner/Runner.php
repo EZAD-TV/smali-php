@@ -13,6 +13,7 @@ use Ezad\Smali\Patch\Patcher;
 use Ezad\Smali\Patch\PatchFile;
 use Ezad\Smali\Patch\PatchFileSet;
 use Ezad\Smali\Patch\Processor;
+use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Filesystem\Filesystem;
 
 /**
@@ -27,6 +28,8 @@ class Runner
      */
     private $config;
 
+    public $adb;
+
     /**
      * Runner constructor.
      * @param RunnerConfig $config
@@ -34,14 +37,18 @@ class Runner
     public function __construct(RunnerConfig $config)
     {
         $this->config = $config;
+        $this->adb = new ADB($this->config->adbPath);
     }
 
     public function run()
     {
+        $out = new ConsoleOutput();
+
         $serial = $this->config->deviceSerial;
-        $adb = new ADB($this->config->adbPath);
+        $adb = $this->adb;
 
         $deviceModel = $adb->getprop($serial, 'ro.product.model');
+        $deviceModel = str_replace(' ', '_', $deviceModel);
         $sdkVersion = $adb->getprop($serial, 'ro.build.version.sdk');
         $device = new DeviceVersion($deviceModel, $sdkVersion);
 
@@ -55,42 +62,59 @@ class Runner
         $fs = new Filesystem();
 
         foreach ($jarFiles as $jarFile) {
+            $out->writeln("<info>Jar: $jarFile</info>");
+
             $tmp = $this->config->tmpRoot . '/tmp' . uniqid();
+            $out->writeln("- Creating stage in $tmp");
+            $fs->mkdir($tmp);
             $local = $tmp . '/' . basename($jarFile);
 
             // try getting sum from device, failing that then pull it.
             $jarSum = $adb->sha1sum($serial, $jarFile);
             if (!$jarSum) {
+                $out->writeln("- Pulling $jarFile from device");
                 $adb->pull($serial, $jarFile, $local);
                 $jarSum = hash_file('sha1', $local);
             }
+            $out->writeln("- Jar sum: $jarSum");
 
             // $patchSum is global and not based on the patches for the jar. just in case there's some patches
             // across multiple jars that require all of them to be applied.
             $sum = "$jarSum.$patchSum";
+            $out->writeln("- Full sum: $sum");
 
             // if we have a modified .jar and patch set linked to $sum already, upload that jar
             $modifiedJar = $registry->find($jarFile, $sum);
-            if (!$modifiedJar) {
+            if ( $modifiedJar ) {
+                $out->writeln("- Found jar in registry");
+            } else {
+                $out->writeln("- Modified jar not in registry, building");
                 if ( !is_file($local) ) {
+                    $out->writeln("- Pulling $jarFile from device");
                     $adb->pull($serial, $jarFile, $local);
                 }
 
+                $out->writeln("- Extracting $local");
                 JarCommands::extract($local);
                 $patchesForJar = $patchSet->filterByJar($jarFile);
                 $dexFiles = $patchesForJar->getDexFiles();
                 foreach ( $dexFiles as $dexFile ) {
+                    $out->writeln("<info>- Dex: $dexFile</info>");
                     $dexFilePath = $tmp . '/' . ltrim($dexFile, '/');
                     $dexOut = "$tmp/out_" . basename($dexFilePath);
+
+                    $out->writeln("  - Disassembling $dexFilePath into $dexOut");
                     SmaliCommands::disassemble($dexFilePath, $dexOut);
 
                     $patchesForDex = $patchesForJar->filterByDex($dexFile);
                     /** @var PatchFile $patch */
                     foreach ( $patchesForDex as $patch ) {
                         $smaliFile = $dexOut . '/' . ltrim($patch->smaliFile, '/');
+                        $out->writeln("  - Patching $smaliFile");
                         $patcher->apply($smaliFile, $patch);
                     }
 
+                    $out->writeln("  - Re-assembling $dexFilePath");
                     unlink($dexFilePath);
                     SmaliCommands::assemble($dexFilePath, $dexOut);
                     $fs->remove($dexOut);
@@ -99,29 +123,21 @@ class Runner
                 $modifiedJar = $local;
                 $fs->rename($local, "$local.orig");
                 $local = $local . '.orig';
-                JarCommands::compress($modifiedJar);
-                $registry->register($jarFile, $sum, $local, $modifiedJar);
 
-                // we need to jar xf the $local file (it's in its own folder already)
-                // get all patches that apply to the jar file, loop
-                //   organize patches by dex file, loop through dex files.
-                //     then run "baksmali dis $dex -o $tmp/out_$dex"
-                //     loop through patches for the dex file
-                //       then parse $tmp/out_$dex/$file and extract the lines from $method
-                //       then run those lines through the Processor
-                //       then put the .smali file together with {before method} . {altered method} . {after method}
-                //     end loop
-                //     unlink $dex
-                //     recompile dex with "smali ass -o $dex $tmp/out_$dex"
-                //     remove $tmp/out_$dex folder
-                //   end loop
-                //   set $modifiedJar to $local
-                //   move $local to $local.orig
-                //   repackage jar file with "jar cf $modifiedJar {everything but .orig}" in the $tmp folder
-                //   $registry->register($jarFile, $sum, $local, $modifiedJar);
-                // end loop
+                $out->writeln("- Compressing $modifiedJar");
+                JarCommands::compress($modifiedJar);
+
+                $sumshort = substr($jarSum, 0, 8) . '...' . substr($patchSum, 0, 8);
+                $out->writeln("- Registering $jarFile:$sumshort to $modifiedJar");
+                $registry->register($jarFile, $sum, $local, $modifiedJar, $device);
             }
-            $adb->push($serial, $modifiedJar, $jarFile);
+
+            $out->writeln("- Pushing modified jar $modifiedJar to device $jarFile");
+            // needs to push to /sdcard and a superuser would cp -f it into place
+            //$adb->push($serial, $modifiedJar, $jarFile);
+
+            $out->writeln("- Cleaning up $tmp");
+            $fs->remove($tmp);
         }
     }
 }

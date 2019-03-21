@@ -36,7 +36,7 @@ class PatchFileSet implements \IteratorAggregate
             $patches[basename($file)] = PatchFile::parseFile($file);
         }
 
-        asort($patches, function(PatchFile $a, PatchFile $b) {
+        uasort($patches, function(PatchFile $a, PatchFile $b) {
             $priorityDiff = $b->priority - $a->priority;
             if ( $priorityDiff !== 0 ) {
                 return $priorityDiff;

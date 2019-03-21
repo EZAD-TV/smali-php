@@ -16,7 +16,7 @@ class ADB
     const PROP_MODEL = 'ro.product.model';
     const PROP_SDK = 'ro.build.version.sdk';
 
-    private $binary;
+    public $binary;
 
     /**
      * ADB constructor.
@@ -29,14 +29,41 @@ class ADB
 
     public function devices()
     {
+        // 192.168.1.14:5555      device product:p212 model:x96 device:p212 transport_id:2
         $proc = new Process([$this->binary, 'devices', '-l']);
         $proc->run();
         $lines = explode("\n", $proc->getOutput());
+        $devices = ['online' => [], 'offline' => []];
+
+        foreach ( $lines as $line ) {
+            if ( strpos($line, 'List of devices') !== false || !$line ) {
+                continue;
+            }
+
+            $parts = preg_split('/\s+/', $line);
+            if ( $parts[1] == 'device' || $parts[1] == 'offline' ) {
+                $device = ['serial' => $parts[0]];
+                foreach ( array_slice($parts, 2) as $part ) {
+                    list($k, $v) = explode(':', $part);
+                    $device[$k] = $v;
+                }
+
+                $k = $parts[1] == 'device' ? 'online' : 'offline';
+                $devices[$k][] = $device;
+            }
+        }
+
+        return $devices;
     }
 
     public function getprop($serial, $prop)
     {
         return $this->run($serial, ['shell', 'getprop', $prop]);
+    }
+
+    public function makeSystemWritable($serial)
+    {
+        $this->run($serial, ['shell', "su -c 'mount -o rw,remount /system'"]);
     }
 
     public function push($serial, $from, $to)

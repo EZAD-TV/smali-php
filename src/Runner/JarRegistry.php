@@ -9,6 +9,8 @@
 namespace Ezad\Smali\Runner;
 
 
+use Ezad\Smali\Device\DeviceVersion;
+
 class JarRegistry
 {
     private $path;
@@ -50,8 +52,9 @@ class JarRegistry
      * @param $sum "sha1 of original jar" "." "sha1 of patch set"
      * @param $originalJarFile
      * @param $modifiedJarFile
+     * @param DeviceVersion $device
      */
-    public function register($jarFile, $sum, $originalJarFile, $modifiedJarFile)
+    public function register($jarFile, $sum, $originalJarFile, $modifiedJarFile, DeviceVersion $device)
     {
         $sum = strtolower($sum);
 
@@ -65,5 +68,17 @@ class JarRegistry
 
         copy($originalJarFile, $savePath . '.orig');
         copy($modifiedJarFile, $savePath);
+
+        // track the device + sdk that had this original jar file
+        $deviceInfo = $device->model . ',' . $device->sdk;
+        $deviceLines = [];
+        if ( is_file($dir . '/devices.txt') ) {
+            $deviceLines = file($dir . '/devices.txt', FILE_IGNORE_NEW_LINES);
+        }
+
+        if ( !in_array($deviceInfo, $deviceLines) ) {
+            $deviceLines[] = $deviceInfo;
+        }
+        file_put_contents($dir . '/devices.txt', implode("\n", $deviceLines));
     }
 }

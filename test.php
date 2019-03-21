@@ -4,6 +4,27 @@ use Symfony\Component\Process\Process;
 
 require_once 'vendor/autoload.php';
 
+$config = new \Ezad\Smali\Runner\RunnerConfig();
+$config->tmpRoot = __DIR__ . '/testfiles/tmps';
+$config->patchPath = __DIR__ . '/testfiles/patches';
+$config->registryPath = __DIR__ . '/testfiles/jars';
+$config->adbPath = '/Users/stevenh/android-sdk-macosx/platform-tools/adb';
+$config->deviceSerial = '192.168.1.19';
+
+$runner = new \Ezad\Smali\Runner\Runner($config);
+$runner->adb->makeSystemWritable($config->deviceSerial);
+$runner->run();
+
+exit;
+
+$adb = new \Ezad\Smali\Runner\ADB('/Users/stevenh/android-sdk-macosx/platform-tools/adb');
+$setupui = new \Ezad\Smali\Runner\SetupUI();
+$setupui->scanNetwork($adb);
+exit;
+
+print_r($adb->devices());
+exit;
+
 $patch =
 "@devices p212:21- rk3399:21-23 model:old-new
 @jar /system/framework/services.jar
