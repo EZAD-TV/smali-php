@@ -6,7 +6,7 @@
  * Time: 19:46
  */
 
-namespace Ezad\Smali\Setup;
+namespace Ezad\Smali\Runner;
 
 /**
  * Console UI for setting ADB path, and picking device to set up.

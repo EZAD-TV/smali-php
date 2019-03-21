@@ -30,5 +30,7 @@ class Processor
         foreach ( $patchFile->instructions as $instruction ) {
             $instruction->execute($this);
         }
+
+        return $this->lines;
     }
 }

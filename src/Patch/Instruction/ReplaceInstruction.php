@@ -32,8 +32,10 @@ class ReplaceInstruction extends AbstractInstruction
             $length = count($this->content);
         }
 
+        $indented = array_map(function($str) { return '    ' . $str; }, $this->content);
+
         // replace the next X lines with the content in the block.
-        $processor->lines = array_splice($processor->lines, $offset, $length, $this->content);
+        array_splice($processor->lines, $position, $length, $indented);
     }
 
     public function hasContent()

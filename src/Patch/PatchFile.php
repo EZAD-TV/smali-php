@@ -56,7 +56,6 @@ class PatchFile
     {
         $instructions = [
             'find' => FindInstruction::class,
-            'findNear' => FindNearInstruction::class,
             'remove' => RemoveInstruction::class,
             'replace' => ReplaceInstruction::class,
         ];
@@ -76,7 +75,7 @@ class PatchFile
 
         for ( $i = 0; $i < $count; $i++ ) {
             $line = $lines[$i];
-            echo "LINE # $i | $line\n";
+            //echo "LINE # $i | $line\n";
             if ( strpos($line, '@devices ') === 0 ) {
                 $patch->specList = DeviceSpec::parseList(substr($line, 9));
             }
@@ -99,12 +98,12 @@ class PatchFile
             foreach ( $instructions as $instr => $instrClass ) {
                 // "@instr " or "@instr\n"
                 if ( preg_match("/^@$instr(\s|$)/", $line) ) {
-                    echo "PARSING instruction $instr\n";
+                    //echo "PARSING instruction $instr\n";
                     /** @var AbstractInstruction $instruction */
                     $instruction = new $instrClass();
                     // parse will give us the index of the last line.
                     $i = $instruction->parse($lines, $i);
-                    echo "AFTER PARSE i=$i\n";
+                    //echo "AFTER PARSE i=$i\n";
 
                     $patch->instructions[] = $instruction;
                     break;

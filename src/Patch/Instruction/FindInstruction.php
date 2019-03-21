@@ -20,9 +20,16 @@ class FindInstruction extends AbstractInstruction
         $toMatch = count($this->content);
         $lineCount = count($processor->lines);
 
-        while ( $processor->pointer < $lineCount ) {
+        if ( count($this->arguments) > 0 ) {
+            $within = (int)$this->arguments[0];
+            $maxPointer = min($lineCount, $processor->pointer + $within + 1);
+        } else {
+            $maxPointer = $lineCount;
+        }
+
+        while ( $processor->pointer < $maxPointer ) {
             $line = $processor->lines[$processor->pointer];
-            if ( $line === $this->content[$consecutive] ) {
+            if ( trim($line) === $this->content[$consecutive] ) {
                 $consecutive++;
                 if ( $consecutive >= $toMatch ) {
                     // reset pointer to start of match area.

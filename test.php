@@ -4,39 +4,64 @@ use Symfony\Component\Process\Process;
 
 require_once 'vendor/autoload.php';
 
-$proc = new Process(['/Users/stevenh/android-sdk-macosx/platform-tools/adb', 'devices', '-l']);
-$proc->run();
-echo $proc->getOutput();
-
-exit;
-
 $patch =
 "@devices p212:21- rk3399:21-23 model:old-new
 @jar /system/framework/services.jar
 @dex /classes.dex
 @file /com/android/server/am/ActivityManagerService.smali
-@method updateConfigurationLocked(Landroid/content/res/Configuration;Lcom/android/server/am/ActivityRecord;ZZ)Z
+@method public static addressAndPortToString(Ljava/net/InetAddress;I)Ljava/lang/String;
 
-# initialize context with @find to look for the first instance of these 2 consecutive lines.
-# current line pointer will reference the .local v23 line.
-# end the @find block with an empty @. this way we can handle searching empty lines without it being ambiguous.
 @find
-.local v23, \"configCopy\":Landroid/content/res/Configuration;
-invoke-static/range {v30 .. v30}, Lcom/android/server/am/ActivityManagerService;->shouldShowDialogs(Landroid/content/res/Configuration;)Z
+:goto_7
+const/4 v1, 0x2
 @
 
-# remove the line referenced at line pointer + 1, the invoke-static line.
-@remove +1
-
-# find the first instance of \"move-result v3\" starting at line pointer within 5 lines of current.
-# set line pointer to this line.
-@findNear 5
-move-result v3
+# replace one line with 2 lines (offset, length). without length, would overwrite the line after.
+@replace +1 1
+const/4 v1, 0x3
+const/4 v1, 0x4
 @
 
-# overwrite lines at pointer to the following
-@replace
-const/16 v3, 0x0
+@find 6
+.line 145
+@
+
+@remove";
+
+// reverse patch
+$patch2 =
+"@devices p212:21- rk3399:21-23 model:old-new
+@jar /system/framework/services.jar
+@dex /classes.dex
+@file /com/android/server/am/ActivityManagerService.smali
+@method public static addressAndPortToString(Ljava/net/InetAddress;I)Ljava/lang/String;
+
+@find
+:goto_7
+const/4 v1, 0x3
+const/4 v1, 0x4
+@
+
+# replace 2 lines with 1 line.
+@replace +1 2
+const/4 v1, 0x2
+@
+
+@find 5
+invoke-virtual {p0}, Ljava/net/InetAddress;->getHostAddress()Ljava/lang/String;
+@
+
+# to insert just use replace with 0 length. offset 0 will put this immediately preceding the found line.
+@replace 0 0
+.line 145
 @";
 
-var_dump(\Ezad\Smali\Patch\PatchFile::parse($patch));
+$pf = \Ezad\Smali\Patch\PatchFile::parse($patch);
+$pf2 = \Ezad\Smali\Patch\PatchFile::parse($patch2);
+
+$patcher = new \Ezad\Smali\Patch\Patcher();
+$patcher->apply('tests/data/IpUtils.smali', $pf);
+$patcher->apply('tests/data/IpUtils.smali', $pf2);
+
+echo 'Patch+reverse: ', hash_file('sha1', 'tests/data/IpUtils.smali'), "\n";
+echo 'Original:      ', hash_file('sha1', 'tests/data/IpUtils.smali.orig'), "\n";

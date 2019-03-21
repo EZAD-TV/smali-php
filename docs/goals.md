@@ -49,10 +49,14 @@ foreach ( $jarFiles as $jarFile ) {
         //       then run those lines through the Processor
         //       then put the .smali file together with {before method} . {altered method} . {after method}
         //     end loop
+        //     unlink $dex
         //     recompile dex with "smali ass -o $dex $tmp/out_$dex"
         //     remove $tmp/out_$dex folder
         //   end loop
-        //   repackage jar file with "jar cf $modifiedJar *" in the $tmp folder
+        //   set $modifiedJar to $local
+        //   move $local to $local.orig
+        //   repackage jar file with "jar cf $modifiedJar {everything but .orig}" in the $tmp folder
+        //   $registry->register($jarFile, $sum, $local, $modifiedJar);
         // end loop
     }
     $adb->push($serial, $modifiedJar, $jarFile);
