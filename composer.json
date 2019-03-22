@@ -1,4 +1,6 @@
 {
+    "name": "ezad/smali-php",
+    "description": "Tools for patching compiled jar files on Android.",
     "require": {
         "symfony/process": "^4.2",
         "symfony/console": "^4.2",
