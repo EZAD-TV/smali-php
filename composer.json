@@ -1,5 +1,5 @@
 {
-    "name": "ezad/smali-php",
+    "name": "ezadtv/smali-php",
     "description": "Tools for patching compiled jar files on Android.",
     "require": {
         "symfony/process": "^4.2",
