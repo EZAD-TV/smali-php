@@ -13,7 +13,7 @@ $config->deviceSerial = '192.168.1.19';
 
 $runner = new \Ezad\Smali\Runner\Runner($config);
 $runner->adb->makeSystemWritable($config->deviceSerial);
-$runner->run();
+print_r($runner->run());
 
 exit;
 

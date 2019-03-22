@@ -40,9 +40,19 @@ class Runner
         $this->adb = new ADB($this->config->adbPath);
     }
 
+    /**
+     * Downloads, patches, and uploads jar files from the device.
+     * Returns a map of "/sdcard/xxx" file paths to *actual* file paths, so that you can cp -f the files into
+     * place while logged in as root.
+     *
+     * @return array
+     */
     public function run()
     {
         $out = new ConsoleOutput();
+
+        // track a list of /sdcard/xxx file paths pointing to their final destination on the unit
+        $fileCopyOps = [];
 
         $serial = $this->config->deviceSerial;
         $adb = $this->adb;
@@ -134,10 +144,15 @@ class Runner
 
             $out->writeln("- Pushing modified jar $modifiedJar to device $jarFile");
             // needs to push to /sdcard and a superuser would cp -f it into place
-            //$adb->push($serial, $modifiedJar, $jarFile);
+
+            $sdcardPath = '/sdcard/' . ltrim(str_replace('/', '_', $jarFile), '_');
+            $adb->push($serial, $modifiedJar, $sdcardPath);
+            $fileCopyOps[$sdcardPath] = $jarFile;
 
             $out->writeln("- Cleaning up $tmp");
             $fs->remove($tmp);
         }
+
+        return $fileCopyOps;
     }
 }
