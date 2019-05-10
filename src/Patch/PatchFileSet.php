@@ -82,7 +82,7 @@ class PatchFileSet implements \IteratorAggregate
         });
     }
 
-    private function filter(callable $predicate)
+    public function filter(callable $predicate)
     {
         $patches = array_filter($this->patches, $predicate);
         return new PatchFileSet($patches);

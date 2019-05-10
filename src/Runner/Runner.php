@@ -12,7 +12,6 @@ use Ezad\Smali\Device\DeviceVersion;
 use Ezad\Smali\Patch\Patcher;
 use Ezad\Smali\Patch\PatchFile;
 use Ezad\Smali\Patch\PatchFileSet;
-use Ezad\Smali\Patch\Processor;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -28,16 +27,20 @@ class Runner
      */
     private $config;
 
+    /**
+     * @var ADBInterface
+     */
     public $adb;
 
     /**
      * Runner constructor.
      * @param RunnerConfig $config
+     * @param ADBInterface|null $adb
      */
-    public function __construct(RunnerConfig $config)
+    public function __construct(RunnerConfig $config, ADBInterface $adb = null)
     {
         $this->config = $config;
-        $this->adb = new ADB($this->config->adbPath);
+        $this->adb = $adb ?: new ADB($this->config->adbPath);
     }
 
     /**
@@ -57,13 +60,20 @@ class Runner
         $serial = $this->config->deviceSerial;
         $adb = $this->adb;
 
-        $deviceModel = $adb->getprop($serial, 'ro.product.model');
+        $deviceModel = $adb->getprop($serial, ADBInterface::PROP_MODEL);
         $deviceModel = str_replace(' ', '_', $deviceModel);
-        $sdkVersion = $adb->getprop($serial, 'ro.build.version.sdk');
+        $sdkVersion = $adb->getprop($serial, ADBInterface::PROP_SDK);
         $device = new DeviceVersion($deviceModel, $sdkVersion);
 
         // first we want a list of patch files that apply to our device
         $patchSet = PatchFileSet::fromFolder($this->config->patchPath)->filterByDevice($device);
+        if ( $this->config->patchFilter ) {
+            $patchSet = $patchSet->filter(function(PatchFile $pf) {
+                $sansExt = str_replace('.patch', '', $pf->name);
+                return in_array($sansExt, $this->config->patchFilter);
+            });
+        }
+
         $jarFiles = $patchSet->getJarFiles();
         $patchSum = $patchSet->getPatchSum();
 

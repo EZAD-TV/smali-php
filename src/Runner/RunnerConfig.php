@@ -45,4 +45,11 @@ class RunnerConfig
      * @var string
      */
     public $tmpRoot = '.';
+
+    /**
+     * List of patch files (sans extension) that ONLY should run. If empty, runs all available.
+     *
+     * @var array
+     */
+    public $patchFilter = [];
 }

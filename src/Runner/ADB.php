@@ -11,11 +11,8 @@ namespace Ezad\Smali\Runner;
 
 use Symfony\Component\Process\Process;
 
-class ADB
+class ADB implements ADBInterface
 {
-    const PROP_MODEL = 'ro.product.model';
-    const PROP_SDK = 'ro.build.version.sdk';
-
     public $binary;
 
     /**
