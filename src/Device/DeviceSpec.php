@@ -44,13 +44,17 @@ class DeviceSpec
 
     public static function parse($string)
     {
+        if ( $string === '*' ) {
+            return new DeviceSpec('', 0, 999);
+        }
+
         if ( strpos($string, ':') !== false ) {
             // handle model:x-y, model:x-, model:-y, model:z
             list($model, $range) = explode(':', $string);
             list($min, $max) = static::parseRange($range);
         } else {
             // handle model, x-y, x-, -y, z
-            if ( preg_match('/^[0-9-]/$', $string) ) {
+            if ( preg_match('/^[0-9-]$/', $string) ) {
                 $model = '';
                 list($min, $max) = static::parseRange($string);
             } else {
