@@ -9,6 +9,8 @@
 namespace Ezad\Smali\Runner;
 
 
+use Symfony\Component\Console\Output\OutputInterface;
+
 class RunnerConfig
 {
     /**
@@ -52,4 +54,9 @@ class RunnerConfig
      * @var array
      */
     public $patchFilter = [];
+
+    /**
+     * @var null|OutputInterface
+     */
+    public $output = null;
 }
